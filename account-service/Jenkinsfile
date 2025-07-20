@@ -1,0 +1,77 @@
+pipeline {
+    agent any
+
+    environment {
+        IMAGE_NAME = "account-service"
+        REPO_URL = "https://github.com/CSEExplorer/spring_bookstore_microservice.git"
+        SSH_HOST = "13.203.222.155"
+        SSH_USER = "ubuntu"
+        JAR_NAME = "app.jar"
+    }
+
+    tools {
+        maven 'Maven 3'
+    }
+
+    stages {
+        stage('Clone Repo') {
+            steps {
+                git credentialsId: 'github-creds', url: "${REPO_URL}"
+            }
+        }
+
+        stage('Build with Maven') {
+            dir('account-service') {
+                steps {
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
+
+        stage('Transfer .env and JAR to EC2') {
+            steps {
+                sshagent(['ec2-ssh']) {
+                    sh """
+                    # Create .env file temporarily (for now it's okay, but store in Jenkins secrets later)
+                    cat > account-service/.env <<EOF
+EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://172.31.0.246:8761/eureka/
+EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
+EUREKA_INSTANCE_INSTANCE_ID=account-service
+EUREKA_INSTANCE_IP_ADDRESS=172.31.14.151
+SPRING_DATASOURCE_URL=jdbc:mysql://account-service-db.czyw86ac6bb5.ap-south-1.rds.amazonaws.com/accountDB
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=4ad+6ad+9=0
+AWS_ACCESS_KEY=AKIAQUFLQNJSWZ5FHOVB
+AWS_SECRET_KEY=E07qlsheCUmfBpYai4tohFfKG3WhO+S5T1toh6GWH
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET=account-microservice-user-profile-image
+EOF
+
+                    # Transfer files to EC2
+                    scp -o StrictHostKeyChecking=no account-service/.env ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.env
+                    scp -o StrictHostKeyChecking=no account-service/target/*.jar ${SSH_USER}@${SSH_HOST}:/home/ubuntu/${JAR_NAME}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(['ec2-ssh']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
+                        docker rm -f ${IMAGE_NAME} || true
+                        docker run -d --name ${IMAGE_NAME} -p 8081:8080 --env-file /home/ubuntu/.env openjdk:17 java -jar /home/ubuntu/${JAR_NAME}
+                    '
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

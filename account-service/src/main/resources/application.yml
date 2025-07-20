@@ -25,8 +25,8 @@ aws:
 eureka:
   client:
     service-url:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
   instance:
-    prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
-    instance-id: ${EUREKA_INSTANCE_INSTANCE_ID:account-service}
-    ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
+     prefer-ip-address: ${EUREKA_INSTANCE_PREFER_IP_ADDRESS:true}
+     instance-id: ${EUREKA_INSTANCE_INSTANCE_ID:account-service}
+     ip-address: ${EUREKA_INSTANCE_IP_ADDRESS:127.0.0.1}
