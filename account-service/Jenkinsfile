@@ -9,7 +9,9 @@ pipeline {
         JAR_NAME = "app.jar"
     }
 
-
+    tools {
+        maven 'Maven 3'  // Make sure Maven 3 is configured in Jenkins Global Tool Configuration
+    }
 
     stages {
         stage('Clone Repo') {
@@ -19,8 +21,8 @@ pipeline {
         }
 
         stage('Build with Maven') {
-            dir('account-service') {
-                steps {
+            steps {
+                dir('account-service') {
                     sh 'mvn clean package -DskipTests'
                 }
             }
@@ -30,7 +32,7 @@ pipeline {
             steps {
                 sshagent(['ec2-ssh']) {
                     sh """
-                    # Create .env file temporarily (for now it's okay, but store in Jenkins secrets later)
+                    # Create .env file temporarily
                     cat > account-service/.env <<EOF
 EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://172.31.0.246:8761/eureka/
 EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
@@ -45,7 +47,6 @@ AWS_REGION=ap-south-1
 AWS_S3_BUCKET=account-microservice-user-profile-image
 EOF
 
-                    # Transfer files to EC2
                     scp -o StrictHostKeyChecking=no account-service/.env ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.env
                     scp -o StrictHostKeyChecking=no account-service/target/*.jar ${SSH_USER}@${SSH_HOST}:/home/ubuntu/${JAR_NAME}
                     """
