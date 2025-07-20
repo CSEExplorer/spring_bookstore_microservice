@@ -9,9 +9,6 @@ pipeline {
         JAR_NAME = "app.jar"
     }
 
-    tools {
-        maven 'Maven 3'  // Make sure Maven 3 is configured in Jenkins Global Tool Configuration
-    }
 
     stages {
         stage('Clone Repo') {
