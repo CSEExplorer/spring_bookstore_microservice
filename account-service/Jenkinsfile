@@ -9,9 +9,7 @@ pipeline {
         JAR_NAME = "app.jar"
     }
 
-    tools {
-        maven 'Maven 3'
-    }
+
 
     stages {
         stage('Clone Repo') {
