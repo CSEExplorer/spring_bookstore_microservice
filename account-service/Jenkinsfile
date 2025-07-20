@@ -6,9 +6,9 @@ pipeline {
         REPO_URL = "https://github.com/CSEExplorer/spring_bookstore_microservice.git"
         SSH_HOST = "13.203.222.155"
         SSH_USER = "ubuntu"
-        JAR_NAME = "app.jar"
+        REMOTE_PATH = "/home/ubuntu/account-service"
+        JAR_NAME = "account-service-0.0.1-SNAPSHOT.jar"
     }
-
 
     stages {
         stage('Clone Repo') {
@@ -25,12 +25,12 @@ pipeline {
             }
         }
 
-        stage('Transfer .env and JAR to EC2') {
+        stage('Transfer files to EC2') {
             steps {
                 sshagent(['ec2-ssh']) {
                     sh """
-                    # Create .env file temporarily
-                    cat > account-service/.env <<EOF
+                        # Create .env file temporarily
+                        cat > account-service/.env <<EOF
 EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://172.31.0.246:8761/eureka/
 EUREKA_INSTANCE_PREFER_IP_ADDRESS=true
 EUREKA_INSTANCE_INSTANCE_ID=account-service
@@ -44,8 +44,10 @@ AWS_REGION=ap-south-1
 AWS_S3_BUCKET=account-microservice-user-profile-image
 EOF
 
-                    scp -o StrictHostKeyChecking=no account-service/.env ${SSH_USER}@${SSH_HOST}:/home/ubuntu/.env
-                    scp -o StrictHostKeyChecking=no account-service/target/*.jar ${SSH_USER}@${SSH_HOST}:/home/ubuntu/${JAR_NAME}
+                        # Transfer JAR, .env and Dockerfile
+                        scp -o StrictHostKeyChecking=no account-service/.env ${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}/.env
+                        scp -o StrictHostKeyChecking=no account-service/target/${JAR_NAME} ${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}/${JAR_NAME}
+                        scp -o StrictHostKeyChecking=no account-service/Dockerfile ${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}/Dockerfile
                     """
                 }
             }
@@ -55,10 +57,12 @@ EOF
             steps {
                 sshagent(['ec2-ssh']) {
                     sh """
-                    ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
-                        docker rm -f ${IMAGE_NAME} || true
-                        docker run -d --name ${IMAGE_NAME} -p 8081:8080 --env-file /home/ubuntu/.env openjdk:17 java -jar /home/ubuntu/${JAR_NAME}
-                    '
+                        ssh -o StrictHostKeyChecking=no ${SSH_USER}@${SSH_HOST} '
+                            cd ${REMOTE_PATH}
+                            docker rm -f ${IMAGE_NAME} || true
+                            docker build -t ${IMAGE_NAME} .
+                            docker run -d --name ${IMAGE_NAME} -p 8081:8080 --env-file .env ${IMAGE_NAME}
+                        '
                     """
                 }
             }
