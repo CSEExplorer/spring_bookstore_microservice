@@ -61,7 +61,7 @@ EOF
                             cd ${REMOTE_PATH}
                             docker rm -f ${IMAGE_NAME} || true
                             docker build -t ${IMAGE_NAME} .
-                            docker run -d --name ${IMAGE_NAME} -p 8081:8080 --env-file .env ${IMAGE_NAME}
+                            docker run -d --name ${IMAGE_NAME} -p 8081:8081 --env-file .env ${IMAGE_NAME}
                         '
                     """
                 }
